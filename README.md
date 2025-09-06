@@ -33,21 +33,64 @@ Para essa tarefa, você utilizará o go routines e deverá se concentrar no proc
 
 # Como rodar o projeto
 
-Pré-requisitos
-Go 1.24 ou superior
-Docker
-Docker Compose
-Instalação
-Clonar o repositório
+## Pré-requisitos
 
+- Go 1.24 ou superior
+- Docker
+- Docker Compose
+
+## Instalação
+
+### 1. Clonar o repositório
+
+```bash
 git clone https://github.com/fhsmendes/auction.git
-cd open-telemetry
-Atualizar dependências
+cd auction
+```
 
+### 2. Atualizar dependências
+
+```bash
 go mod tidy
-Executando a aplicação
-Rodar o Docker Compose
+```
+
+### 3. Configurar variáveis de ambiente
+
+Configure as seguintes variáveis no arquivo `cmd/auction/.env`:
+
+```env
+# Configurações de batch para lances
+BATCH_INSERT_INTERVAL=20s
+MAX_BATCH_SIZE=4
+
+# Intervalo para fechamento automático dos leilões
+AUCTION_INTERVAL=20s
+
+# Configuração do MongoDB
+MONGO_INITDB_ROOT_USERNAME=admin
+MONGO_INITDB_ROOT_PASSWORD=admin
+MONGODB_URL=mongodb://admin:admin@mongodb:27017/auctions?authSource=admin
+MONGODB_DB=auctions
+```
+
+## Executando a aplicação
+
+### 1. Rodar o Docker Compose
+
+```bash
 docker-compose up -d
+```
+
+### 2. Verificar se a aplicação está funcionando
+
+```bash
+# Teste básico - deve retornar lista vazia se não houver leilões
+curl -X GET "http://localhost:8080/auction?status=0"
+```
+
+A aplicação estará disponível em: `http://localhost:8080`
+
+**Importante:** O leilão será automaticamente fechado após o tempo definido em `AUCTION_INTERVAL` (padrão: 20 segundos).
 
 # Endpoints da API
 
@@ -62,13 +105,13 @@ Cria um novo leilão no sistema.
 
 ```bash
 curl -X POST http://localhost:8080/auction \
-  -H "Content-Type: application/json" \
-  -d '{
-    "product_name": "iPhone 15 Pro",
-    "category": "Eletrônicos",
-    "description": "iPhone 15 Pro em perfeito estado, sem riscos, com todos os acessórios originais",
-    "condition": 1
-  }'
+    -H "Content-Type: application/json" \
+    -d '{
+        "product_name": "iPhone 15 Pro",
+        "category": "Eletrônicos",
+        "description": "iPhone 15 Pro em perfeito estado, sem riscos, com todos os acessórios originais",
+        "condition": 1
+    }'
 ```
 
 **Condições disponíveis:**
@@ -125,12 +168,12 @@ Cria um novo lance em um leilão.
 
 ```bash
 curl -X POST http://localhost:8080/bid \
-  -H "Content-Type: application/json" \
-  -d '{
-    "user_id": "b2f9198e-11c3-4cfa-b8bd-a7af65814cc0",
-    "auction_id": "41cc6b10-fad1-4523-9bf5-1729a2cdfb53",
-    "amount": 1500.00
-  }'
+    -H "Content-Type: application/json" \
+    -d '{
+        "user_id": "b2f9198e-11c3-4cfa-b8bd-a7af65814cc0",
+        "auction_id": "41cc6b10-fad1-4523-9bf5-1729a2cdfb53",
+        "amount": 1500.00
+    }'
 ```
 
 ### 2. Buscar Lances por Leilão
@@ -153,82 +196,65 @@ Busca informações de um usuário pelo seu ID.
 curl -X GET http://localhost:8080/user/b2f9198e-11c3-4cfa-b8bd-a7af65814cc0
 ```
 
-## Exemplos de Fluxo Completo
+# Exemplos de uso
 
-### Cenário: Criar um leilão e fazer lances
+## Fluxo completo: Criar um leilão e fazer lances
+
+### 1. Criar um leilão
 
 ```bash
-# 1. Criar um leilão
 curl -X POST http://localhost:8080/auction \
-  -H "Content-Type: application/json" \
-  -d '{
-    "product_name": "MacBook Pro M3",
-    "category": "Informática",
-    "description": "MacBook Pro 14 polegadas com chip M3, 16GB RAM, 512GB SSD",
-    "condition": 1
-  }'
-
-# 2. Buscar leilões ativos
-curl -X GET "http://localhost:8080/auction?status=0"
-
-# 3. Fazer um lance (substitua pelos IDs reais)
-curl -X POST http://localhost:8080/bid \
-  -H "Content-Type: application/json" \
-  -d '{
-    "user_id": "user-uuid-aqui",
-    "auction_id": "auction-uuid-aqui",
-    "amount": 8000.00
-  }'
-
-# 4. Fazer outro lance maior
-curl -X POST http://localhost:8080/bid \
-  -H "Content-Type: application/json" \
-  -d '{
-    "user_id": "outro-user-uuid",
-    "auction_id": "auction-uuid-aqui",
-    "amount": 8500.00
-  }'
-
-# 5. Verificar todos os lances do leilão
-curl -X GET http://localhost:8080/bid/auction-uuid-aqui
-
-# 6. Aguardar o fechamento automático do leilão (conforme AUCTION_INTERVAL)
-
-# 7. Verificar o lance vencedor
-curl -X GET http://localhost:8080/auction/winner/auction-uuid-aqui
+    -H "Content-Type: application/json" \
+    -d '{
+        "product_name": "MacBook Pro M3",
+        "category": "Informática",
+        "description": "MacBook Pro 14 polegadas com chip M3, 16GB RAM, 512GB SSD",
+        "condition": 1
+    }'
 ```
 
-## Variáveis de Ambiente
+### 2. Buscar leilões ativos
 
-Configure as seguintes variáveis no arquivo `cmd/auction/.env`:
-
-```env
-# Configurações de batch para lances
-BATCH_INSERT_INTERVAL=20s
-MAX_BATCH_SIZE=4
-
-# Intervalo para fechamento automático dos leilões
-AUCTION_INTERVAL=20s
-
-# Configuração do MongoDB
-MONGO_INITDB_ROOT_USERNAME=admin
-MONGO_INITDB_ROOT_PASSWORD=admin
-MONGODB_URL=mongodb://admin:admin@mongodb:27017/auctions?authSource=admin
-MONGODB_DB=auctions
-```
-
-**Importante:** O leilão será automaticamente fechado após o tempo definido em `AUCTION_INTERVAL` (padrão: 20 segundos).
-
-## Testando a API
-
-Após iniciar a aplicação com `docker-compose up -d`, você pode testar os endpoints usando os exemplos de curl acima.
-
-A aplicação estará disponível em: `http://localhost:8080`
-
-**Dica:** Para verificar se a aplicação está funcionando:
 ```bash
-# Teste básico - deve retornar lista vazia se não houver leilões
 curl -X GET "http://localhost:8080/auction?status=0"
+```
+
+### 3. Fazer lances
+
+```bash
+# Primeiro lance
+curl -X POST http://localhost:8080/bid \
+    -H "Content-Type: application/json" \
+    -d '{
+        "user_id": "user-uuid-aqui",
+        "auction_id": "auction-uuid-aqui",
+        "amount": 8000.00
+    }'
+
+# Segundo lance maior
+curl -X POST http://localhost:8080/bid \
+    -H "Content-Type: application/json" \
+    -d '{
+        "user_id": "outro-user-uuid",
+        "auction_id": "auction-uuid-aqui",
+        "amount": 8500.00
+    }'
+```
+
+### 4. Verificar lances do leilão
+
+```bash
+curl -X GET http://localhost:8080/bid/auction-uuid-aqui
+```
+
+### 5. Aguardar fechamento automático
+
+Aguarde o tempo definido em `AUCTION_INTERVAL` para o fechamento automático do leilão.
+
+### 6. Verificar lance vencedor
+
+```bash
+curl -X GET http://localhost:8080/auction/winner/auction-uuid-aqui
 ```
 
 ## Respostas da API
@@ -239,34 +265,34 @@ curl -X GET "http://localhost:8080/auction?status=0"
 ### Exemplo de resposta - Buscar leilão
 ```json
 {
-  "id": "41cc6b10-fad1-4523-9bf5-1729a2cdfb53",
-  "product_name": "iPhone 15 Pro",
-  "category": "Eletrônicos",
-  "description": "iPhone 15 Pro em perfeito estado",
-  "condition": 1,
-  "status": 0,
-  "timestamp": "2025-09-06T10:30:00Z"
+    "id": "41cc6b10-fad1-4523-9bf5-1729a2cdfb53",
+    "product_name": "iPhone 15 Pro",
+    "category": "Eletrônicos",
+    "description": "iPhone 15 Pro em perfeito estado",
+    "condition": 1,
+    "status": 0,
+    "timestamp": "2025-09-06T10:30:00Z"
 }
 ```
 
 ### Exemplo de resposta - Lance vencedor
 ```json
 {
-  "auction": {
-    "id": "41cc6b10-fad1-4523-9bf5-1729a2cdfb53",
-    "product_name": "iPhone 15 Pro",
-    "category": "Eletrônicos",
-    "description": "iPhone 15 Pro em perfeito estado",
-    "condition": 1,
-    "status": 1,
-    "timestamp": "2025-09-06T10:30:00Z"
-  },
-  "bid": {
-    "id": "bid-uuid",
-    "user_id": "user-uuid",
-    "auction_id": "41cc6b10-fad1-4523-9bf5-1729a2cdfb53",
-    "amount": 1500.00,
-    "timestamp": "2025-09-06T10:35:00Z"
-  }
+    "auction": {
+        "id": "41cc6b10-fad1-4523-9bf5-1729a2cdfb53",
+        "product_name": "iPhone 15 Pro",
+        "category": "Eletrônicos",
+        "description": "iPhone 15 Pro em perfeito estado",
+        "condition": 1,
+        "status": 1,
+        "timestamp": "2025-09-06T10:30:00Z"
+    },
+    "bid": {
+        "id": "bid-uuid",
+        "user_id": "user-uuid",
+        "auction_id": "41cc6b10-fad1-4523-9bf5-1729a2cdfb53",
+        "amount": 1500.00,
+        "timestamp": "2025-09-06T10:35:00Z"
+    }
 }
-
+```
